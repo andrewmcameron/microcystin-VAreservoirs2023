@@ -1,2 +1,2 @@
 # microcystin-VAreservoirs2023
-Code to compare and visualize microcystin levels in several Virginia reservoirs.  Includes box whisker and scatter plots to highlight monthly variations and compare littoral versus lacustrine concentrations. I prepared this at the request of Dr. Paul Bukaveckas at VCU.
+Project to compare and visualize microcystin levels in several Virginia reservoirs.  Includes box-whisker and scatter plots to highlight monthly variations and compare littoral versus lacustrine concentrations. Data collected by Dr. Paul Bukaveckas of the Center for Environmental Studies at VCU. Analysis and plots produced at his request for a talk he was giving on the subject.
