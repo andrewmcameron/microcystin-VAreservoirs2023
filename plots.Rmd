@@ -1,0 +1,131 @@
+---
+title: "VA Reservoir Microcystin Analysis"
+output: html_document
+---
+
+```{r setup, include=FALSE, message = FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+```
+
+```{r `data prep`}
+data <- openxlsx::read.xlsx("2023data.xlsx", sheet = 2, startRow =  2)
+data <- data %>%
+  select(2:4, 6, 12)
+
+# Convert `date` column from Excel encoded date to a more legible date format. Otherwise date shows as numeric value, e.g. '44230'.
+    data$Sample.Date <- data$Sample.Date * 86400      # 86400 = seconds in a day.
+    data$Sample.Date <- as.POSIXct(data$Sample.Date, origin = "1899-12-30", tz = "UTC")
+
+# subset study stations - colored green in DEQ sheet of original xlsx source file.
+  stationIDs <- c("1-BCNG003.13", "1-BCNG003.46", "2-BVR002.19",
+                  "2-BVR002.33", "2-XLU000.10", "2-XLU000.15", 
+                  "7-LTR000.04", "7-LTR001.05", "8-NIR012.99", 
+                  "8-NIR013.36", "1ALOH007.93","1ALOH008.01", 
+                  "2-APP020.23", "2DAPP019.68", "2-CHK025.15", 
+                  "2-CHK027.10", "7-LAS000.01", "7-LAS000.06", 
+                  "8-CLC003.48", "8-CLC003.80", "9-XBL000.20", 
+                  "9-XBL000.98")
+  
+ df <- data %>%
+   filter(Station.ID %in% stationIDs) %>%
+   mutate(MonthNum = lubridate::month(Sample.Date)) %>%
+   filter(MonthNum %in% c(6:9)) %>%
+   mutate(Month = month.name[MonthNum]) %>%
+   mutate(Month = factor(Month, levels = c(month.name[6:9])))
+```
+
+```{r `littoral vs lacustrine}
+# Create separate df for littoral vs lacustrine plot
+ lacustrineIDs <- c("1ALOH007.93", "1-BCNG003.13", "2-APP020.23", "2-BVR002.19", "2-CHK025.15", "2-XLU000.10", "7-LAS000.06", "7-LTR000.04", "8-CLC003.48", "8-NIR012.99", "9-XBL000.20")
+ 
+ ## check for 11 IDs and that all descriptors in fact indicate lacustrine
+ length(lacustrineIDs)
+ df$Station.Descriptor[df$Station.ID %in% lacustrineIDs]
+ 
+ ## access littoral station IDs and check to ensure accuracy
+ littoralIDs <- stationIDs[!stationIDs %in% lacustrineIDs]
+  length(littoralIDs)
+ df$Station.Descriptor[df$Station.ID %in% littoralIDs]
+ 
+
+  x <- df %>%
+    mutate(type = if_else(Station.ID %in% littoralIDs, "littoral", "lacustrine"),
+         LakeCode = stringr::str_extract(Station.ID, "[A-Za-z]{3}"))
+  # this returned 2 distinct vals for Lake Chesdin 3-letter code. 
+  # adjust to ensure only 11 codes, 1 per lake
+  x$LakeCode[x$LakeCode == "DAP"] <- "APP"
+
+# --! Final scatter plot df -- !
+df.scatterplot <- 
+  x %>% group_by(LakeCode, type) %>%
+    summarize(Mean_MC = mean(ppb),
+              type = first(type)) %>%
+    tidyr::pivot_wider( names_from = type, values_from = Mean_MC)
+
+```
+
+
+make a box whisker plot showing variation by month for June, July, Aug and Sept (pooling results across all stations). 
+
+```{r `microcystin variation box plot`}
+library(ggplot2)
+library(showtext)
+font_add_google(name = "Encode Sans SC", family = "titlefont")
+font_add_google(name = "Roboto", family = "font2")
+showtext_auto()
+
+ggplot(df, aes(x = Month, y = ppb, fill = Month)) + 
+  geom_boxplot(alpha = .75) +
+  labs(title = "Variation in 2023 Microcystin Concentration",
+       subtitle = "By month across all stations",
+       x = "Month",
+       y = "Microcystin (ppb)") +
+  theme_minimal() +
+  scale_fill_manual(values = c("#DBFE87", "#B24C63", "#FFE381", "#6699CC")) + 
+  theme(axis.title.x = element_text(margin = margin(t = 10)),
+        axis.title.y = element_text(margin = margin(r = 12)),
+        axis.title = element_text(size = 52, family = "titlefont"),
+        axis.text = element_text(size = 41, family = "font2", color = "grey30"),
+        plot.title = element_text(size = 75, family = "titlefont", margin = margin(b = 15)),
+        plot.subtitle = element_text(size = 52, family = "titlefont", margin = margin(b = 15)),
+        legend.position = "none")
+
+ggsave("microcystin_boxplot.jpg", width = 12, height = 8, dpi =300)
+ 
+```
+
+
+make a scatter plot showing littoral vs. lacustrine MC values by lake; use average values (across months) for each station.  For example, the first station is the Curtis Lake Lacustrine (near dam) site, and the second station is the Curtis Lake Littoral site (this would plot at 0.13, 0.12).  The plot would have a total of 11 data points (paired stations for each lake are highlighted in gray and green, can ignore others for this plot).
+
+include a 1:1 line for visual reference (I do not need a linear regression fit to these data), 
+
+include a 3-letter lake abbreviation next to the data point for each of the 11 lakes (these can all be the same symbol type).
+
+```{r}
+library(ggrepel)
+ggplot(data = df.scatterplot, aes(x = littoral, y = lacustrine)) + 
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "grey35") + # 1:1 reference line
+  geom_jitter(size = 5, alpha = .80, color = "salmon3") +
+    labs(title = "Littoral vs Lacustrine Microcystin Levels Across Lakes",
+       x = "Littoral MC (ppb)",
+       y = "Lacustrine MC (ppb)") +
+  geom_text_repel(aes(label = LakeCode), 
+                  vjust = -1, hjust = 1, 
+                  color = "grey40",
+                  force = 1,
+                  point.padding = 0,
+                  size = 15) + # Add labels
+  theme_minimal() +
+  theme(axis.title.x = element_text(margin = margin(t = 10)),
+        axis.title.y = element_text(margin = margin(r = 12)),
+        axis.title = element_text(size = 52, family = "titlefont"),
+        axis.text = element_text(size = 41, family = "font2", color = "grey30"),
+        plot.title = element_text(size = 75, family = "titlefont", margin = margin(b = 15)),
+        plot.subtitle = element_text(size = 52, family = "titlefont", margin = margin(b = 20)),
+        legend.position = "none")
+
+
+ggsave("littoralVslacustrine.jpg", width = 12, height = 8, dpi =300)
+
+````
