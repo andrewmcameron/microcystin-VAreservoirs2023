@@ -77,19 +77,20 @@ showtext_auto()
 
 ggplot(df, aes(x = Month, y = ppb, fill = Month)) + 
   geom_boxplot(alpha = .75) +
-  labs(title = "Variation in 2023 Microcystin Concentration",
-       subtitle = "By month across all stations",
+  labs(#title = "Variation in 2023 Microcystin Concentration",
+       #subtitle = "By month across all stations",
        x = "Month",
        y = "Microcystin (ppb)") +
   theme_minimal() +
   scale_fill_manual(values = c("#DBFE87", "#B24C63", "#FFE381", "#6699CC")) + 
   theme(axis.title.x = element_text(margin = margin(t = 10)),
         axis.title.y = element_text(margin = margin(r = 12)),
-        axis.title = element_text(size = 52, family = "titlefont"),
-        axis.text = element_text(size = 41, family = "font2", color = "grey30"),
-        plot.title = element_text(size = 75, family = "titlefont", margin = margin(b = 15)),
-        plot.subtitle = element_text(size = 52, family = "titlefont", margin = margin(b = 15)),
-        legend.position = "none")
+        axis.title = element_text(size = 90, family = "titlefont"),
+        axis.text = element_text(size = 80, family = "font2", color = "grey30"),
+        plot.title = element_text(size = 100, family = "titlefont", margin = margin(b = 15)),
+        plot.subtitle = element_text(size = 90, family = "titlefont", margin = margin(b = 15)),
+        legend.position = "none",
+        panel.border = element_rect(color = "grey30", fill = NA, linewidth = 1.2))
 
 ggsave("microcystin_boxplot.jpg", width = 12, height = 8, dpi =300)
  
@@ -104,26 +105,39 @@ include a 3-letter lake abbreviation next to the data point for each of the 11 l
 
 ```{r}
 library(ggrepel)
+my_title = "Littoral vs Lacustrine Microcystin Levels Across Reservoirs"
+
+# customize gridlines
+major.x <- c(.1, .2, .3, .4)
+minor.x <- c(.05, .15, .25, .35, .45)
+
 ggplot(data = df.scatterplot, aes(x = littoral, y = lacustrine)) + 
+  geom_vline(xintercept = major.x, color = "grey80", linewidth = .5) + 
+  geom_vline(xintercept = minor.x, color = "grey90", linewidth = .25)  +
   geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "grey35") + # 1:1 reference line
-  geom_jitter(size = 5, alpha = .80, color = "salmon3") +
-    labs(title = "Littoral vs Lacustrine Microcystin Levels Across Lakes",
-       x = "Littoral MC (ppb)",
-       y = "Lacustrine MC (ppb)") +
+  geom_jitter(size = 5, alpha = .77, color = "salmon3") +
+  labs(title = NULL,
+         x = "Littoral MC (ppb)",
+         y = "Lacustrine MC (ppb)") +
   geom_text_repel(aes(label = LakeCode), 
                   vjust = -1, hjust = 1, 
                   color = "grey40",
                   force = 1,
                   point.padding = 0,
-                  size = 15) + # Add labels
+                  size = 16.5) +
+  scale_x_continuous(limits = c(0, .46), breaks = c(0, .1, .2, .3, .4)) +
+  scale_y_continuous(limits = c(0, .6)) +
   theme_minimal() +
   theme(axis.title.x = element_text(margin = margin(t = 10)),
         axis.title.y = element_text(margin = margin(r = 12)),
-        axis.title = element_text(size = 52, family = "titlefont"),
-        axis.text = element_text(size = 41, family = "font2", color = "grey30"),
-        plot.title = element_text(size = 75, family = "titlefont", margin = margin(b = 15)),
-        plot.subtitle = element_text(size = 52, family = "titlefont", margin = margin(b = 20)),
-        legend.position = "none")
+        axis.title = element_text(size = 90, family = "titlefont"),
+        axis.text = element_text(size = 80, family = "font2", color = "grey30"),
+        plot.title = element_text(size = 90, family = "titlefont", margin = margin(b = 15)),
+        plot.subtitle = element_text(size = 50, family = "titlefont", margin = margin(b = 20)),
+        legend.position = "none",
+        panel.grid = element_line(color = "lightgrey"),
+        panel.border = element_rect(color = "grey40", fill = NA, linewidth = 1.2))
+
 
 
 ggsave("littoralVslacustrine.jpg", width = 12, height = 8, dpi =300)
